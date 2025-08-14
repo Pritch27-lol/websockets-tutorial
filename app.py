@@ -4,8 +4,13 @@ import asyncio
 import json
 import logging
 import secrets
+import http
+import os
+import signal
+from typing import Any
 
 from websockets.asyncio.server import broadcast, serve, ServerConnection
+from websockets.http11 import Request
 from connect4 import PLAYER1, PLAYER2, Connect4
 
 logging.basicConfig(
@@ -13,12 +18,15 @@ logging.basicConfig(
     level=logging.DEBUG,
 )
 
-JOIN = {}
-WATCH = {}
+type GameConnection = tuple[Connect4, set[ServerConnection]]
+type Event = dict[str, Any]
+
+JOIN: dict[str, GameConnection] = {}
+WATCH: dict[str, GameConnection] = {}
 
 
 async def error(websocket: ServerConnection, message: str):
-    event = {
+    event: Event = {
         "type": "error",
         "message": message,
     }
@@ -40,7 +48,7 @@ async def start(websocket: ServerConnection):
     try:
         # Send the secret access token to the browser for the first player,
         # where it will be used for building a "join" link
-        event = {
+        event: Event = {
             "type": "init",
             "join": join_key,
             "watch": watch_key,
@@ -71,9 +79,10 @@ async def join(websocket: ServerConnection, join_key: str):
         connected.remove(websocket)
 
 
-async def replay(websocket: ServerConnection, game):
+async def replay(websocket: ServerConnection, game: Connect4):
     for player, column, row in game.moves.copy():
-        event = {
+        
+        event: Event = {
             "type": "play",
             "player": player,
             "column": column,
@@ -101,7 +110,7 @@ async def play(
             continue
 
         # Send a "play" event to update the UI.
-        event = {
+        event: Event = {
             "type": "play",
             "player": player,
             "column": column,
@@ -110,7 +119,7 @@ async def play(
         broadcast(connected, json.dumps(event))
         # If move is winning, send a "win" event.
         if game.winner is not None:
-            event = {
+            event: Event = {
                 "type": "win",
                 "player": game.winner,
             }
@@ -151,9 +160,17 @@ async def handler(websocket: ServerConnection):
         await start(websocket)
 
 
+def health_check(connection: ServerConnection, request: Request):
+    if request.path == "/healthz":
+        return connection.respond(http.HTTPStatus.OK, "Ok\n")
+
+
 async def main():
-    async with serve(handler, "", 8001) as server:
-        await server.serve_forever()
+    port = int(os.environ.get("PORT", "8001"))
+    async with serve(handler, "", port, process_request=health_check) as server:
+        loop = asyncio.get_running_loop()
+        loop.add_signal_handler(signal.SIGTERM, server.close)
+        await server.wait_closed()
 
 
 if __name__ == "__main__":

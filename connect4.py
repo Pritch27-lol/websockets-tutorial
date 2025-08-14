@@ -2,6 +2,7 @@ __all__ = ["PLAYER1", "PLAYER2", "Connect4"]
 
 PLAYER1, PLAYER2 = "red", "yellow"
 
+type Move = tuple[str, int, int]
 
 class Connect4:
     """
@@ -15,10 +16,11 @@ class Connect4:
 
     """
 
+
     def __init__(self):
-        self.moves = []
+        self.moves: list[Move] = []
         self.top = [0 for _ in range(7)]
-        self.winner = None
+        self.winner: str | None = None
 
     @property
     def last_player(self):
@@ -37,7 +39,7 @@ class Connect4:
         b = sum(1 << (8 * column + row) for _, column, row in self.moves[::-2])
         return any(b & b >> v & b >> 2 * v & b >> 3 * v for v in [1, 7, 8, 9])
 
-    def play(self, player, column):
+    def play(self, player: str, column: int) -> int:
         """
         Play a move in a column.
 
