@@ -1,7 +1,7 @@
 import { createBoard, playMove } from "./connect4.js";
 
 function getWebSocketServer() {
-  if (window.location.host === "python-websockets.github.io") {
+  if (window.location.host === "pritch27-lol.github.io") {
     return "wss://fortunate-dusty-personal-space27-0e3bbf87.koyeb.app/";
   } else if (window.location.host === "localhost:8000") {
     return "ws://localhost:8001/";
