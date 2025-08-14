@@ -1,3 +1,5 @@
+from typing import Optional
+
 __all__ = ["PLAYER1", "PLAYER2", "Connect4"]
 
 PLAYER1, PLAYER2 = "red", "yellow"
@@ -20,7 +22,7 @@ class Connect4:
     def __init__(self):
         self.moves: list[Move] = []
         self.top = [0 for _ in range(7)]
-        self.winner: str | None = None
+        self.winner: Optional[str] = None
 
     @property
     def last_player(self):
